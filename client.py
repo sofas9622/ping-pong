@@ -14,7 +14,7 @@ def connect_to_server():
     while True:
         try:
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client.connect(('localhost', 8080)) # ---- Підключення до сервера
+            client.connect(('7.tcp.eu.ngrok.io', 13843)) # ---- Підключення до сервера
             buffer = ""
             game_state = {}
             my_id = int(client.recv(24).decode())
@@ -41,9 +41,16 @@ def receive():
 font_win = font.Font(None, 72)
 font_main = font.Font(None, 36)
 # --- ЗОБРАЖЕННЯ ----
-
+BG_IMG = transform.scale(image.load("bg.jpg"), (WIDTH, HEIGHT))
 # --- ЗВУКИ ---
-
+is_start_play_music = False
+mixer.init()
+mixer.music.load("bg_music.mp3")
+WALL_HIT_SOUND = mixer.Sound("fromwall.mp3")
+PLATFORM_HIT_SOUND = mixer.Sound("fromplatform.mp3")
+WALL_HIT_SOUND.set_volume(0.5)
+PLATFORM_HIT_SOUND.set_volume(0.5)
+MUSIC_ENABLED = True
 # --- ГРА ---
 game_over = False
 winner = None
@@ -60,11 +67,12 @@ while True:
         countdown_text = font.Font(None, 72).render(str(game_state["countdown"]), True, (255, 255, 255))
         screen.blit(countdown_text, (WIDTH // 2 - 20, HEIGHT // 2 - 30))
         display.update()
+        is_start_play_music = True
         continue  # Не малюємо гру до завершення відліку
 
     if "winner" in game_state and game_state["winner"] is not None:
         screen.fill((20, 20, 20))
-
+        mixer.music.stop()
         if you_winner is None:  # Встановлюємо тільки один раз
             if game_state["winner"] == my_id:
                 you_winner = True
@@ -88,7 +96,7 @@ while True:
         continue  # Блокує гру після перемоги
 
     if game_state:
-        screen.fill((30, 30, 30))
+        screen.blit(BG_IMG, (0, 0))
         draw.rect(screen, (0, 255, 0), (20, game_state['paddles']['0'], 20, 100))
         draw.rect(screen, (255, 0, 255), (WIDTH - 40, game_state['paddles']['1'], 20, 100))
         draw.circle(screen, (255, 255, 255), (game_state['ball']['x'], game_state['ball']['y']), 10)
@@ -97,10 +105,10 @@ while True:
 
         if game_state['sound_event']:
             if game_state['sound_event'] == 'wall_hit':
-                # звук відбиття м'ячика від стін
+                WALL_HIT_SOUND.play()
                 pass
             if game_state['sound_event'] == 'platform_hit':
-                # звук відбиття м'ячика від платформи
+                PLATFORM_HIT_SOUND.play()
                 pass
 
     else:
@@ -115,3 +123,7 @@ while True:
         client.send(b"UP")
     elif keys[K_s]:
         client.send(b"DOWN")
+    
+    if is_start_play_music and MUSIC_ENABLED:
+        mixer.music.play(-1)
+        is_start_play_music = False
